@@ -204,7 +204,7 @@ void inject_plasma(void)
 
 * `read_plasma_signature()`:
   * The function takes a large input
-    ```
+    ```c
     plasma_len = read(0,plasma_sig,256);
     ```
     With the previous `stack pivot` assumption, we can be certain that this is where our ROP payload lies.
