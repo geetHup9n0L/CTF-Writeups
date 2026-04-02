@@ -62,7 +62,7 @@ undefined8 main(void)
   * The code let us write into `array[idx]` with numerical values
   * There is no logical check for input index beside the text warning in `puts(text)`
 
-    ==> This means we can move outside the scope of `array[]` memory, with potential arbitrary write - a OOB (out of bound) bug
+    ==> This means we can move outside the scope of `array[]` memory - a OOB (out of bound) bug, with potential arbitrary write 
 
 `print_flag()`:
 ```c
