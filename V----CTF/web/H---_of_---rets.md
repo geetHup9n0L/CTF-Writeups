@@ -1,5 +1,5 @@
 
-Description:
+### Description:
 ```
 Every object allocated lives somewhere. The flag was never sent to you — but it's already in your browser. Take a snapshot. Dig deeper.
 ```
@@ -15,7 +15,7 @@ In web development, "Heap" and "Snapshot" refer to Memory Profiling. The challen
 
 **How to solve this:**
 
-1. Open Developer Tools: Press F12 or Ctrl+Shift+I (Cmd+Option+I on Mac) on the challenge page.
+1. Open Developer Tools: Press `F12` or `Ctrl+Shift+I` (Cmd+Option+I on Mac) on the challenge page.
 
 2. Go to the "Memory" Tab: This is usually located next to "Network" or "Application."
 
@@ -38,3 +38,7 @@ In web development, "Heap" and "Snapshot" refer to Memory Profiling. The challen
 * This should highlight a string or a variable containing the full flag.
 
 <img width="1049" height="882" alt="image" src="https://github.com/user-attachments/assets/4fce360c-7d10-4b9c-9093-f252d4d27200" />
+
+___
+
+Often in "Single Page Applications" (like the "NodeWatch" dashboard in your screenshot), developers might fetch data or hardcode configuration objects that contain sensitive info. Even if that info isn't "printed" on the screen, it stays in the browser's memory as long as the tab is open. A Heap Snapshot allows you to look at the "brain" of the page to find these hidden strings.
