@@ -72,14 +72,14 @@ void deliver(void)
   return;
 }
 ```
-* we can straight away see a BOF (buffer overflow) vulnerbility inside the function:
+* we can straight away see a **BOF (buffer overflow)** vulnerbility inside the function:
   ```c
   char buffer [32];
   ...
   gets(buffer);
   ...
   ```
-* other functions such as: `avenue()`, `boulevard()` and `court()` are just puts(text) so we pay no mind to it
+* other functions such as: `avenue()`, `boulevard()` and `court()` are just `puts(text)` so we pay no mind to it
 
 `drive()`:
 ```c
@@ -96,7 +96,7 @@ void drive(long var)
   return;
 }
 ```
-* this is a hidden function that isnt called in the main program
+* this is a hidden function that isnt called inside the main program
 * we have `system("/bin/sh");` which spawn shell
 * indicating a `ret2win` type of challenge
 
@@ -113,24 +113,25 @@ We add another 8 bytes to fill the `rbp` space as well
 
 <img width="803" height="237" alt="image" src="https://github.com/user-attachments/assets/22de3949-80a2-4946-affe-0c35a380c9ce" />
 
-Now, overwrite RIP with the address of `drive()`. However, as we notice from the code:
+Next, overwrite RIP with the address of `drive()`. However, as we notice from the code:
 ```c
  if (var == 0x48435344) {
     puts("Success! Secret package delivered.\n");
     system("/bin/sh");
   }
 ```
-There is a check in order to reach the system()
+There is a check in order to reach `system()`
 
-We can easily bypass this by using different binary address in `drive()`, in this case:
+We can easily bypass this by using a different binary address in `drive()`, in this case is the line inside the `if` check snippet:
 ```c
 puts("Success! Secret package delivered.\n");
 ```
-Let the program return here is great, skipping the check code
 
 <img width="525" height="267" alt="image" src="https://github.com/user-attachments/assets/41ca4d1f-fae2-4321-9263-5764d9214213" />
 
-Run the payload:
+Let the program return here is great, skipping the check code entirely
+
+Now, Run the payload:
 
 <img width="803" height="144" alt="image" src="https://github.com/user-attachments/assets/6dbbddb2-bfa9-440c-b440-04548f0dbb00" />
 
