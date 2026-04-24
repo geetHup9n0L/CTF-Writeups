@@ -113,7 +113,8 @@ Partial RELRO   No canary found   NX enabled    No PIE          No RPATH   No RU
 
 ___
 ### Exploit:
-**First**
+**First =====** 
+
 We initially have a structure:
 ```c
 uint32_t header[3];
@@ -129,7 +130,8 @@ and requires us to manually fill those datas:
 fread(header, 1, 12, stdin)
 ```
 
-**Second**
+**Second =====**
+
 We do see a bug inside a function:
 
 Integer overflow:
@@ -149,7 +151,8 @@ static inline int validate_size(uint32_t sz) {
 ```
 We can leverage this bug to bypass the check
 
-**Third**
+**Third =====**
+
 We spot a formatstring vulnerbility inside the code:
 
 ```c
