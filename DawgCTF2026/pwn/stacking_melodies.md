@@ -1,4 +1,7 @@
 Provided C code:
+
+`stacking_melodies.c`:
+
 ```c
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,7 +62,7 @@ void process_stream() {
 
     char *title = malloc(t_len + 1);
     if (title) {
-        fread(title, 1, t_len, stdin);
+        fread(title, 1, t_len, stdin);   // user input for `title` from stdin
         title[t_len] = '\0';
     }
     //arbitraty large size, so my storage doesnt fill up
@@ -81,7 +84,7 @@ void process_stream() {
 
     if (title) {
         printf("Entry: ");
-        printf(title); 
+        printf(title);             // print out `title` ==> formatstring vuln
         printf("\n");
     }
     int rating = calculate_rating();
@@ -104,7 +107,9 @@ RELRO           STACK CANARY      NX            PIE             RPATH      RUNPA
 Partial RELRO   No canary found   NX enabled    No PIE          No RPATH   No RUNPATH   52 Symbols  No     0               4               chall
 
 ```
-
+* `Partial RELRO`: GOT is overwritable
+* `No canary`: no canary check when BOFing
+* `No PIE`: the binary addresses stay fixed
 ___
 Script: `scrript.py`:
 ```python
