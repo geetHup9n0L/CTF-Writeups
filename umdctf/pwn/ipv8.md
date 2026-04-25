@@ -205,6 +205,10 @@ So move on to the next approach:
 
   <img width="805" height="283" alt="image" src="https://github.com/user-attachments/assets/88615251-79d2-4f5b-a1c6-b42b5536c692" />
 
+  run against server and obtain the flag:
+
+  <img width="803" height="349" alt="image" src="https://github.com/user-attachments/assets/78db1ad4-7a19-4785-8ce3-b36990edeb4c" />
+
 ___
 Script: `script.py`
 ```python
@@ -222,6 +226,8 @@ def GDB():
 		''')
 
 
+# nc challs.umdctf.io 30308
+# p = remote("challs.umdctf.io", 30308)
 p = process(exe.path)
 GDB()
 
